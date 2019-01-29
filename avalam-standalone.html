@@ -42,7 +42,8 @@ $(document).ready(function(){
 	$(".col").click(function(){
 		var indice = $(this).data("indice");
 		console.log("couleur:" + position[indice].col + " nombre:" + position[indice].n);
-
+		if (position[indice].n == 5) return; // il ne sert a rien de cliquer sur une pile de 5
+		// TODO : a generaliser aux piles "mortes"
 		if (!modeDeplacement) { // debut deplacement 
 			console.log("debut deplacement");
 			modeDeplacement = true; 
