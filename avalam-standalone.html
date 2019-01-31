@@ -27,12 +27,62 @@
 <script src="avalam.js"></script>
 
 <script>
- 
+
+
+
 var position = [];
 var modeDeplacement = false;
 var indiceDepart=false; 
 var colDepart=false;  
 
+function verifieVoisins(indice){ //cette fonction indique si la pile d'indice est encore vivente 
+	for(i=0; i<topo[indice].nbVoisins; i++){
+		aux = topo[indice].adj[i];
+		if (topo[aux].vivant){
+			if(position[indice].n + position[aux].n <= 5) return;					
+		}
+	}
+	topo[indice].vivant = false;
+	return;
+}
+
+function parcoursVoisins(indice, indiceDepart){//cette fonction parcourt les voisins de la pile avec cet indice, vu que tous 
+				 	       //ses voisin sont afféctés pour un deplacement 
+	var voisins = ensembleVoisins(indice, indiceDepart);
+	
+	if (topo[indice].vivant){
+		verifieVoisins(indice);
+	}
+	
+	for (l=0; l<voisins.length; l++){
+		verifieVoisins(voisins[l]);
+	}
+	
+	return;
+}
+
+function ensembleVoisins(ind, indDep){  //cette fonction retourne un vecteur avec tous les voisins des piles indice et indiceDebut
+					//ces voisins sont las pièces affectés par le deplacement
+	var v = [];
+	for (a = 0; a<topo[ind].adj.length; a++){	//copier le vecteur, mais ainsi on peut changer v sans changer topo[ind].adj
+		v[a] = topo[ind].adj[a];
+	}
+	
+	for (i=v.length, j=0; j<topo[indDep].adj.length; j++){
+		let k = 0;
+		for(k=0; k<topo[ind].adj.length; k++){
+			if(topo[indDep].adj[j] == topo[ind].adj[k]){
+				k = 10;
+			}
+		}
+		if (k<10){
+			v[i] = topo[indDep].adj[j];
+			i++;
+		}
+	}
+	
+	return v;
+}
 
 $(document).ready(function(){
 	var jaune = $(".jaune"); 
@@ -42,7 +92,7 @@ $(document).ready(function(){
 	$(".col").click(function(){
 		var indice = $(this).data("indice");
 		console.log("couleur:" + position[indice].col + " nombre:" + position[indice].n);
-		if (position[indice].n == 5) return; // il ne sert a rien de cliquer sur une pile de 5
+		if (!topo[indice].vivant) return; // il ne sert a rien de cliquer sur une pile de 5
 		// TODO : a generaliser aux piles "mortes"
 		if (!modeDeplacement) { // debut deplacement 
 			console.log("debut deplacement");
@@ -110,6 +160,9 @@ $(document).ready(function(){
 				position[indice].n = position[indiceDepart].n + position[indice].n;
 				position[indiceDepart].col = false;
 				position[indiceDepart].n = 0;
+				topo[indiceDepart].vivant = false;
+				if (position[$(this).data("indice")].n == 5) topo[indice].vivant = false;
+				parcoursVoisins(indice, indiceDepart);
 				
 				$(".nombre",$(this)).html(position[indice].n);
 
@@ -118,23 +171,29 @@ $(document).ready(function(){
 				modeDeplacement = false;
 				$(".col").mouseout();
 
+				for(i=0;i<topo.length;i++) {
+					if (topo[i].vivant) console.log(i + " est vivante");
+					else console.log(i + " est morte");
+				}
+
 			}	//FIN:validation			
 		} // FIN:fin deplacement
 	});
 
 
 	$(document).on("mouseover",".jaune",function() {
-		if (position[$(this).data("indice")].n == 5) return; 
+		if (!topo[$(this).data("indice")].vivant) return; 
 // TODO: ajouter un test permettant de parcourir les positions à proximité de ce pion 
 // SI toutes les cases autour sont vides 
 // OU si somme(cette case+case proche) >5 : ne pas activer le survol
+		
 		if (!modeDeplacement)
 			$("img",$(this)).attr("src","jaune2.png");
 		else if (topo[indiceDepart].adj.indexOf($(this).data("indice")) != -1)
 			$("img",$(this)).attr("src","jaune2.png");
 	});
 	$(document).on("mouseover",".rouge",function() {
-		if (position[$(this).data("indice")].n == 5) return;
+		if (!topo[$(this).data("indice")].vivant) return;
 		if (!modeDeplacement)
 			$("img",$(this)).attr("src","rouge2.png");
 		else if (topo[indiceDepart].adj.indexOf($(this).data("indice")) != -1)
@@ -164,9 +223,12 @@ $(document).ready(function(){
 		n.data({indice:i, left:pos.left, top:pos.top});
 		$("#avalam").append(n);
 		position.push({n:1,col:topo[i].col }); 
+
+		
 	}
 
 	console.log(position);
+	
 
 /* nb : les coordonnées sont décalées d'un vecteur (-47,-104)
 les coordonnées correspondent aux centres, en css, on place le côté haut-gauche 
